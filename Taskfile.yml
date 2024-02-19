@@ -1,0 +1,5 @@
+version: '3'
+
+tasks:
+  proto:
+    cmd: protoc -I ./proto/ --go_out=. --go_opt=module=github.com/lovehotel24/booking-service --go-grpc_out=pkg/grpc/userpb --go-grpc_opt=module=github.com/lovehotel24/booking-service/pkg/grpc/userpb proto/user/v1/*.proto
