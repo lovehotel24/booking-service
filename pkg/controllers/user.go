@@ -88,11 +88,15 @@ func (u *UserService) DeleteUser(ctx context.Context, userReq *userpb.DeleteUser
 	return &emptypb.Empty{}, configs.DB.Where("id = ?", userReq.GetId().GetValue()).Delete(&user).Error
 }
 
-func (u *UserService) GetAllUsers(context.Context, *emptypb.Empty) (*userpb.GetAllUserResponse, error) {
+func (u *UserService) GetAllUsers(ctx context.Context, userReq *userpb.GetAllUserRequest) (*userpb.GetAllUserResponse, error) {
+
+	limit := userReq.GetLimit()
+	offset := userReq.GetOffset()
 
 	var users []models.User
 	var allUsers []*userpb.User
-	configs.DB.Find(&users)
+
+	configs.DB.Limit(int(limit)).Offset(int(offset)).Find(&users)
 
 	for _, v := range users {
 		user := &userpb.User{

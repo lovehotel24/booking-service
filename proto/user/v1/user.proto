@@ -9,7 +9,7 @@ service UserService {
   rpc GetUser (GetUserRequest) returns (GetUserResponse) {}
   rpc UpdateUser (UpdateUserRequest) returns (UpdateUserResponse) {}
   rpc DeleteUser (DeleteUserRequest) returns (google.protobuf.Empty) {}
-  rpc GetAllUsers (google.protobuf.Empty) returns (GetAllUserResponse) {}
+  rpc GetAllUsers (GetAllUserRequest) returns (GetAllUserResponse) {}
 }
 
 message UUID {
@@ -45,6 +45,11 @@ message UpdateUserResponse {
 
 message DeleteUserRequest {
   UUID id = 1;
+}
+
+message GetAllUserRequest {
+  int32 limit = 1;
+  int32 offset = 2;
 }
 
 message GetAllUserResponse {
