@@ -48,7 +48,7 @@ func (u *UserService) CreateUser(ctx context.Context, userReq *userpb.CreateUser
 
 func (u *UserService) GetUser(ctx context.Context, userReq *userpb.GetUserRequest) (*userpb.GetUserResponse, error) {
 
-	user := getUserById(userReq.GetId())
+	user := getUserById(userReq.GetId().GetValue())
 
 	userInfo := userpb.User{
 		Id:    &userpb.UUID{Value: user.Id.String()},
@@ -65,7 +65,7 @@ func (u *UserService) GetUser(ctx context.Context, userReq *userpb.GetUserReques
 func (u *UserService) UpdateUser(ctx context.Context, userReq *userpb.UpdateUserRequest) (*userpb.UpdateUserResponse, error) {
 
 	req := userReq.GetUser()
-	user := getUserById(req.GetId())
+	user := getUserById(req.GetId().GetValue())
 
 	req.GetRole()
 
@@ -85,7 +85,7 @@ func (u *UserService) UpdateUser(ctx context.Context, userReq *userpb.UpdateUser
 func (u *UserService) DeleteUser(ctx context.Context, userReq *userpb.DeleteUserRequest) (*emptypb.Empty, error) {
 
 	var user models.User
-	return &emptypb.Empty{}, configs.DB.Where("id = ?", userReq.GetId()).Delete(&user).Error
+	return &emptypb.Empty{}, configs.DB.Where("id = ?", userReq.GetId().GetValue()).Delete(&user).Error
 }
 
 func (u *UserService) GetAllUsers(context.Context, *emptypb.Empty) (*userpb.GetAllUserResponse, error) {
@@ -96,9 +96,10 @@ func (u *UserService) GetAllUsers(context.Context, *emptypb.Empty) (*userpb.GetA
 
 	for _, v := range users {
 		user := &userpb.User{
-			Id:   &userpb.UUID{Value: v.Id.String()},
-			Name: v.Name,
-			Role: v.Role,
+			Id:    &userpb.UUID{Value: v.Id.String()},
+			Name:  v.Name,
+			Phone: v.Phone,
+			Role:  v.Role,
 		}
 		allUsers = append(allUsers, user)
 	}

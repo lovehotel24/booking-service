@@ -1,17 +1,28 @@
 package cmd
 
 import (
+	"fmt"
+	"log"
+	"net"
 	"os"
+	"os/signal"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+
+	"github.com/lovehotel24/booking-service/pkg/configs"
+	"github.com/lovehotel24/booking-service/pkg/controllers"
+	"github.com/lovehotel24/booking-service/pkg/grpc/userpb"
 )
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "booking-service",
 	Short: "booking service for love hotel24",
+	Run:   runCommand,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
@@ -48,4 +59,54 @@ func init() {
 	viper.BindPFlag("grpc-port", rootCmd.Flags().Lookup("grpc-port"))
 	viper.BindEnv("gin_mode", "GIN_MODE")
 	viper.AutomaticEnv()
+}
+
+func runCommand(cmd *cobra.Command, args []string) {
+	dbConf := &configs.DBConfig{
+		Host:       viper.GetString("pg-host"),
+		Port:       viper.GetString("pg-port"),
+		User:       viper.GetString("pg-user"),
+		Pass:       viper.GetString("pg-pass"),
+		DBName:     viper.GetString("pg-db"),
+		SSLMode:    viper.GetString("pg-ssl"),
+		AdminPhone: viper.GetString("adm-ph"),
+		AdminPass:  viper.GetString("adm-pass"),
+		UserPhone:  viper.GetString("usr-ph"),
+		UserPass:   viper.GetString("usr-pass"),
+	}
+
+	configs.Connect(dbConf)
+
+	lis, err := net.Listen("tcp", "0.0.0.0:50051")
+
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
+	}
+
+	var opts []grpc.ServerOption
+
+	s := grpc.NewServer(opts...)
+	reflection.Register(s)
+
+	userpb.RegisterUserServiceServer(s, &controllers.UserService{})
+
+	go func() {
+
+		fmt.Println("Starting server...")
+		if err := s.Serve(lis); err != nil {
+			log.Fatalf("Failed to serve: %v", err)
+		}
+
+	}()
+
+	// Wait for control C to exit
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt)
+	// Block until a signal is received
+	<-ch
+	fmt.Println("Stopping the server")
+	s.Stop()
+	fmt.Println("Closing the listener")
+	lis.Close()
+
 }

@@ -1,0 +1,39 @@
+### create user over grpc
+GRPC localhost:50051/UserService/CreateUser
+
+{
+  "user": {
+    "id": {"value": "713f5a5a-cf21-11ee-bd17-4a29f78ba46c"},
+    "name": "guest",
+    "phone": "0634349645",
+    "role": "USER"
+  }
+}
+
+### get all user over grpc
+GRPC localhost:50051/UserService/GetAllUsers
+
+### get user by id
+GRPC localhost:50051/UserService/GetUser
+
+{
+  "id": {"value": "713f5a5a-cf21-11ee-bd17-4a29f78ba46e"}
+}
+
+### update user
+GRPC localhost:50051/UserService/UpdateUser
+
+{
+  "user": {
+    "id": {"value": "713f5a5a-cf21-11ee-bd17-4a29f78ba46c"},
+    "name": "guest0",
+    "role": "ADMIN"
+  }
+}
+
+### delete user
+GRPC localhost:50051/UserService/DeleteUser
+
+{
+  "id": {"value": "713f5a5a-cf21-11ee-bd17-4a29f78ba46e"}
+}
