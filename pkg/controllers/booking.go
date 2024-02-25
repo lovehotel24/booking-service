@@ -41,6 +41,7 @@ func (a API) GetBookingById(ctx context.Context, request routers.GetBookingByIdR
 
 func (a API) GetAllBooking(ctx context.Context, request routers.GetAllBookingRequestObject) (routers.GetAllBookingResponseObject, error) {
 	var book []routers.Booking
+
 	a.DB.Find(&book)
 	return routers.GetAllBooking200JSONResponse(book), nil
 }
