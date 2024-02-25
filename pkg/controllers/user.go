@@ -5,50 +5,65 @@ import (
 
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"gorm.io/gorm"
 
-	"github.com/lovehotel24/booking-service/pkg/configs"
 	"github.com/lovehotel24/booking-service/pkg/grpc/userpb"
 	"github.com/lovehotel24/booking-service/pkg/models"
 )
 
 type UserService struct {
 	userpb.UnimplementedUserServiceServer
+	DB *gorm.DB
 }
 
-func getUserById(userID interface{}) models.User {
-	var user models.User
-	configs.DB.Where("id = ?", userID).First(&user)
-	return user
+func NewUserService(db *gorm.DB) *UserService {
+	userService := &UserService{
+		DB: db,
+	}
+
+	return userService
 }
 
-func getUserByPhone(phone string) models.User {
+func (u *UserService) getUserById(userID interface{}) (models.User, error) {
 	var user models.User
-	configs.DB.Where("phone = ?", phone).First(&user)
-	return user
+	if err := u.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		return models.User{}, err
+	}
+	return user, nil
+}
+
+func (u *UserService) getUserByPhone(phone string) (models.User, error) {
+	var user models.User
+	if err := u.DB.Where("phone = ?", phone).First(&user).Error; err != nil {
+		return models.User{}, err
+	}
+	return user, nil
 }
 
 func (u *UserService) CreateUser(ctx context.Context, userReq *userpb.CreateUserRequest) (*emptypb.Empty, error) {
 
 	req := userReq.GetUser()
 
-	Id, err := uuid.Parse(req.GetId().GetValue())
+	id, err := uuid.Parse(req.GetId().GetValue())
 	if err != nil {
 		return nil, err
 	}
 
 	newUser := models.User{
-		Id:    Id,
+		Id:    id,
 		Name:  req.GetName(),
 		Phone: req.GetPhone(),
 		Role:  req.GetRole(),
 	}
 
-	return &emptypb.Empty{}, configs.DB.Create(&newUser).Error
+	return &emptypb.Empty{}, u.DB.Create(&newUser).Error
 }
 
 func (u *UserService) GetUser(ctx context.Context, userReq *userpb.GetUserRequest) (*userpb.GetUserResponse, error) {
-
-	user := getUserById(userReq.GetId().GetValue())
+	user, err := u.getUserById(userReq.GetId().GetValue())
+	if err != nil {
+		return &userpb.GetUserResponse{}, err
+	}
 
 	userInfo := userpb.User{
 		Id:    &userpb.UUID{Value: user.Id.String()},
@@ -63,9 +78,12 @@ func (u *UserService) GetUser(ctx context.Context, userReq *userpb.GetUserReques
 }
 
 func (u *UserService) UpdateUser(ctx context.Context, userReq *userpb.UpdateUserRequest) (*userpb.UpdateUserResponse, error) {
-
 	req := userReq.GetUser()
-	user := getUserById(req.GetId().GetValue())
+
+	user, err := u.getUserById(req.GetId().GetValue())
+	if err != nil {
+		return &userpb.UpdateUserResponse{}, err
+	}
 
 	req.GetRole()
 
@@ -79,13 +97,12 @@ func (u *UserService) UpdateUser(ctx context.Context, userReq *userpb.UpdateUser
 
 	return &userpb.UpdateUserResponse{
 		User: userReq.GetUser(),
-	}, configs.DB.Save(&user).Error
+	}, u.DB.Save(&user).Error
 }
 
 func (u *UserService) DeleteUser(ctx context.Context, userReq *userpb.DeleteUserRequest) (*emptypb.Empty, error) {
-
 	var user models.User
-	return &emptypb.Empty{}, configs.DB.Where("id = ?", userReq.GetId().GetValue()).Delete(&user).Error
+	return &emptypb.Empty{}, u.DB.Where("id = ?", userReq.GetId().GetValue()).Delete(&user).Error
 }
 
 func (u *UserService) GetAllUsers(ctx context.Context, userReq *userpb.GetAllUserRequest) (*userpb.GetAllUserResponse, error) {
@@ -96,7 +113,9 @@ func (u *UserService) GetAllUsers(ctx context.Context, userReq *userpb.GetAllUse
 	var users []models.User
 	var allUsers []*userpb.User
 
-	configs.DB.Limit(int(limit)).Offset(int(offset)).Find(&allUsers)
+	if err := u.DB.Limit(int(limit)).Offset(int(offset)).Find(&allUsers).Error; err != nil {
+		return &userpb.GetAllUserResponse{}, err
+	}
 
 	for _, v := range users {
 		user := &userpb.User{

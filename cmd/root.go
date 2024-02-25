@@ -9,6 +9,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
@@ -44,9 +45,9 @@ func init() {
 	rootCmd.Flags().String("pg-host", "localhost", "postgres server address")
 	rootCmd.Flags().String("pg-port", "5432", "postgres server port")
 	rootCmd.Flags().String("pg-db", "postgres", "postgres database name")
-	rootCmd.Flags().String("pg-ssl", "disable", "postgres server ssl mode on or not")
-	rootCmd.Flags().String("port", "8080", "booking service port")
-	rootCmd.Flags().String("grpc-port", "8081", "booking service grpc port")
+	rootCmd.Flags().Bool("pg-ssl", false, "postgres server ssl mode on or not")
+	rootCmd.Flags().String("port", "8081", "booking service port")
+	rootCmd.Flags().String("grpc-port", "50051", "booking service grpc port")
 	replacer := strings.NewReplacer("-", "_")
 	viper.SetEnvKeyReplacer(replacer)
 	viper.SetEnvPrefix("book")
@@ -63,22 +64,31 @@ func init() {
 }
 
 func runCommand(cmd *cobra.Command, args []string) {
-	dbConf := &configs.DBConfig{
-		Host:       viper.GetString("pg-host"),
-		Port:       viper.GetString("pg-port"),
-		User:       viper.GetString("pg-user"),
-		Pass:       viper.GetString("pg-pass"),
-		DBName:     viper.GetString("pg-db"),
-		SSLMode:    viper.GetString("pg-ssl"),
-		AdminPhone: viper.GetString("adm-ph"),
-		AdminPass:  viper.GetString("adm-pass"),
-		UserPhone:  viper.GetString("usr-ph"),
-		UserPass:   viper.GetString("usr-pass"),
+	dbConf := configs.NewDBConfig().
+		WithHost(viper.GetString("pg-host")).
+		WithPort(viper.GetString("pg-port")).
+		WithUser(viper.GetString("pg-user")).
+		WithPass(viper.GetString("pg-pass")).
+		WithName(viper.GetString("pg-db")).
+		WithSecure(viper.GetBool("pg-ssl"))
+	//dbConf := &configs.DBConfig{
+	//	host:       viper.GetString("pg-host"),
+	//	port:       viper.GetString("pg-port"),
+	//	user:       viper.GetString("pg-user"),
+	//	pass:       viper.GetString("pg-pass"),
+	//	name:       viper.GetString("pg-db"),
+	//	sslMode:    viper.GetString("pg-ssl"),
+	//	AdminPhone: viper.GetString("adm-ph"),
+	//	AdminPass:  viper.GetString("adm-pass"),
+	//	UserPhone:  viper.GetString("usr-ph"),
+	//	UserPass:   viper.GetString("usr-pass"),
+	//}
+	db, err := configs.NewDB(dbConf)
+	if err != nil {
+		fmt.Printf("failed to connect db: %s", err)
 	}
 
-	configs.Connect(dbConf)
-
-	grpcListener, err := net.Listen("tcp", ":50051") // Change the port as needed
+	grpcListener, err := net.Listen("tcp", fmt.Sprintf(":%s", viper.GetString("grpc-port")))
 	if err != nil {
 		fmt.Printf("Failed to create gRPC listener: %v\n", err)
 		return
@@ -89,11 +99,15 @@ func runCommand(cmd *cobra.Command, args []string) {
 	s := grpc.NewServer(opts...)
 	reflection.Register(s)
 
-	userpb.RegisterUserServiceServer(s, &controllers.UserService{})
-	app := controllers.NewApp(configs.DB)
+	userService := controllers.NewUserService(db)
+	userpb.RegisterUserServiceServer(s, userService)
+
+	var log = logrus.New()
+	app := controllers.NewApp(db, log)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
+
 	go func() {
 		defer wg.Done()
 		fmt.Println("gRPC server listening on :50051")
@@ -104,8 +118,8 @@ func runCommand(cmd *cobra.Command, args []string) {
 
 	go func() {
 		defer wg.Done()
-		fmt.Println("Fiber server listening on :8080")
-		if err := app.Listen(":8081"); err != nil {
+		fmt.Println("Fiber server listening on :8081")
+		if err := app.Listen(fmt.Sprintf(":%s", viper.GetString("port"))); err != nil {
 			fmt.Printf("Fiber server failed to listen: %v\n", err)
 		}
 	}()
@@ -117,61 +131,20 @@ func runCommand(cmd *cobra.Command, args []string) {
 	case <-sigChan:
 		fmt.Println("Shutting down...")
 
-		// Stop gRPC server
 		s.GracefulStop()
 
-		// Close listeners
 		err := grpcListener.Close()
 		if err != nil {
 			fmt.Printf("Grpc server shutdown error: %v\n", err)
 		}
+
 		err = app.Shutdown()
 		if err != nil {
 			fmt.Printf("Fiber server shutdown error: %v\n", err)
 		}
 	}
 
-	// Wait for both servers to finish
 	wg.Wait()
 
 	fmt.Println("Server gracefully stopped.")
-	//log.Fatalln(app.Listen(":8081"))
-
-	//listener, err := net.Listen("tcp", ":8081")
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//
-	//m := cmux.New(listener)
-	//grpcListener := m.Match(cmux.HTTP2HeaderField("content-type", "application/grpc"))
-	//httpListener := m.Match(cmux.HTTP1Fast())
-	//g := new(errgroup.Group)
-	//
-	//g.Go(func() error { return s.Serve(grpcListener) })
-	//g.Go(func() error { return app.Listen(httpListener.Addr().String()) })
-	//g.Go(func() error { return m.Serve() })
-	//
-	//log.Println("run server:", g.Wait())
-
-	//go func() {
-	//
-	//	fmt.Println("Starting server...")
-	//	if err := s.Serve(lis); err != nil {
-	//		log.Fatalf("Failed to serve: %v", err)
-	//	}
-	//
-	//}()
-	//
-	//// Wait for control C to exit
-	//ch := make(chan os.Signal, 1)
-	//signal.Notify(ch, os.Interrupt)
-	//// Block until a signal is received
-	//
-	//<-ch
-	//fmt.Println("Stopping the server")
-	//s.Stop()
-	//fmt.Println("Closing the listener")
-	//lis.Close()
-	//app := controllers.NewApp(configs.DB)
-	//log.Fatalln(app.Listen(":8081"))
 }

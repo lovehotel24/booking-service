@@ -3,8 +3,8 @@ POST http://localhost:8081/v1/booking
 Content-Type: application/json
 
 {
-  "userId": "a8682ebc-d241-11ee-bc1f-4a29f78ba461",
-  "roomId": "a8682ebc-d241-11ee-bc1f-4a29f78ba46b"
+  "userId": "a8682ebc-d241-11ee-bc1f-4a29f78ba421",
+  "roomId": "a8682ebc-d241-11ee-bc1f-4a29f78ba4cc"
 }
 
 ### get all booking
@@ -16,7 +16,7 @@ GET http://localhost:8081/v1/booking/f137b224-d3cd-11ee-9e54-4a29f78ba46e
 Content-Type: application/json
 
 ### get booking by user id
-GET http://localhost:8081/v1/booking/user/a8682ebc-d241-11ee-bc1f-4a29f78ba461
+GET http://localhost:8081/v1/booking/user/a8682ebc-d241-11ee-bc1f-4a29f78ba421
 
 ### delete booking by booking id
 DELETE http://localhost:8081/v1/booking/37855360-d3b7-11ee-a064-4a29f78ba46e
