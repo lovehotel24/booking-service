@@ -88,7 +88,7 @@ func (a API) GetBookingByUserId(ctx context.Context, request routers.GetBookingB
 	var book []routers.Booking
 	errMsg := fmt.Sprintf("failed to get booking")
 
-	if err := a.DB.Where("user_id = ?", userId).First(&book).Error; err != nil {
+	if err := a.DB.Where("user_id = ?", userId).Find(&book).Error; err != nil {
 		return routers.GetBookingByUserIddefaultJSONResponse{Body: routers.Error{Message: &errMsg}, StatusCode: http.StatusBadRequest}, err
 	}
 
