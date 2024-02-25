@@ -7,6 +7,24 @@ Content-Type: application/json
   "roomId": "a8682ebc-d241-11ee-bc1f-4a29f78ba46b"
 }
 
-### get booking
-GET http://localhost:8081/v1/booking/693c442c-d245-11ee-83be-4a29f78ba46e
+### get all booking
+
+GET http://localhost:8081/v1/booking
+
+### get booking by booking id
+GET http://localhost:8081/v1/booking/f137b224-d3cd-11ee-9e54-4a29f78ba46e
 Content-Type: application/json
+
+### get booking by user id
+GET http://localhost:8081/v1/booking/user/a8682ebc-d241-11ee-bc1f-4a29f78ba461
+
+### delete booking by booking id
+DELETE http://localhost:8081/v1/booking/37855360-d3b7-11ee-a064-4a29f78ba46e
+
+### update booking by booking id
+PUT http://localhost:8081/v1/booking/38557194-d3b7-11ee-a064-4a29f78ba46e
+Content-Type: application/json
+
+{
+  "roomId": "a8682ebc-d241-11ee-bc1f-4a29f78ba4ff"
+}

@@ -8,14 +8,14 @@ import (
 
 type Booking struct {
 	gorm.Model
-	Id            uuid.UUID      `gorm:"primary_key;type:uuid;default:uuid_generate_v4()"`
-	RoomId        uuid.UUID      `gorm:"type:uuid;"`
-	UserId        uuid.UUID      `gorm:"type:uuid;"`
-	BookStartDate datatypes.Date `gorm:"type:date"`
-	BookEndDate   datatypes.Date `gorm:"type:date"`
-	CheckInTime   datatypes.Time `gorm:"type:time"`
-	CheckOutTime  datatypes.Time `gorm:"type:time"`
-	PaymentStatus bool           `gorm:"default:true"`
+	Id            uuid.UUID      `json:"id" gorm:"primary_key;type:uuid;default:uuid_generate_v4()"`
+	RoomId        uuid.UUID      `json:"roomId" gorm:"type:uuid;"`
+	UserId        uuid.UUID      `json:"userId" gorm:"type:uuid;"`
+	BookStartDate datatypes.Date `json:"bookStartDate" gorm:"type:date"`
+	BookEndDate   datatypes.Date `json:"bookEndDate" gorm:"type:date"`
+	CheckInTime   datatypes.Time `json:"checkInTime" gorm:"type:time"`
+	CheckOutTime  datatypes.Time `json:"checkOutTime" gorm:"type:time"`
+	PaymentStatus bool           `json:"paymentStatus" gorm:"default:true"`
 }
 
 func (book *Booking) BeforeCreate(tx *gorm.DB) (err error) {
