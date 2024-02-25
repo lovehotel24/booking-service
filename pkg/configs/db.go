@@ -35,5 +35,9 @@ func Connect(conf *DBConfig) {
 	if err != nil {
 		panic(err)
 	}
+	err = db.AutoMigrate(&models.Booking{})
+	if err != nil {
+		panic(err)
+	}
 	DB = db
 }

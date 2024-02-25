@@ -12,11 +12,3 @@ type User struct {
 	Phone string    `json:"phone" gorm:"<-:create;uniqueIndex"`
 	Role  string    `json:"role"`
 }
-
-//func (user *User) BeforeCreate(tx *gorm.DB) (err error) {
-//	user.Id, err = uuid.NewUUID()
-//	if err != nil {
-//		return err
-//	}
-//	return nil
-//}

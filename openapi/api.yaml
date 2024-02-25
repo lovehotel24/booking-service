@@ -1,0 +1,83 @@
+openapi: 3.0.3
+info:
+  title: Booking
+  description: Booking service for Love Hotel24
+  version: 1.0.0
+servers:
+  - url: 'https://localhost:8081'
+paths:
+  /v1/booking:
+    post:
+      summary: "Create Booking"
+      operationId: "createBooking"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Booking"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookId"
+  /v1/booking/{BookId}:
+    parameters:
+      - name: BookId
+        in: path
+        description: The id of the booking
+        required: true
+        schema:
+          type: string
+        example: e1cb23d0-6cbe-4a29-b586-bfa424bc93fd
+    get:
+      summary: "Get Booking Id by Id"
+      operationId: "getBookingById"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+
+components:
+  schemas:
+    BookId:
+      type: object
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+    Booking:
+      x-go-type: models.Booking
+      x-go-type-import:
+        name: Booking
+        path: github.com/lovehotel24/booking-service/pkg/models
+      type: object
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        roomId:
+          type: "string"
+          format: "uuid"
+        userId:
+          type: "string"
+          format: "uuid"
+        bookStartDate:
+          type: "string"
+          format: "date"
+        bookEndDate:
+          type: "string"
+          format: "date"
+        checkInTime:
+          type: "string"
+          format: "date"
+        checkOutTime:
+          type: "string"
+          format: "date"
+        paymentStatus:
+          type: "boolean"
+  

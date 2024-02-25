@@ -1,0 +1,12 @@
+### create booking
+POST http://localhost:8081/v1/booking
+Content-Type: application/json
+
+{
+  "userId": "a8682ebc-d241-11ee-bc1f-4a29f78ba461",
+  "roomId": "a8682ebc-d241-11ee-bc1f-4a29f78ba46b"
+}
+
+### get booking
+GET http://localhost:8081/v1/booking/693c442c-d245-11ee-83be-4a29f78ba46e
+Content-Type: application/json

@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
+	"syscall"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -77,10 +78,10 @@ func runCommand(cmd *cobra.Command, args []string) {
 
 	configs.Connect(dbConf)
 
-	lis, err := net.Listen("tcp", "0.0.0.0:50051")
-
+	grpcListener, err := net.Listen("tcp", ":50051") // Change the port as needed
 	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
+		fmt.Printf("Failed to create gRPC listener: %v\n", err)
+		return
 	}
 
 	var opts []grpc.ServerOption
@@ -89,24 +90,88 @@ func runCommand(cmd *cobra.Command, args []string) {
 	reflection.Register(s)
 
 	userpb.RegisterUserServiceServer(s, &controllers.UserService{})
+	app := controllers.NewApp(configs.DB)
 
+	var wg sync.WaitGroup
+	wg.Add(2)
 	go func() {
-
-		fmt.Println("Starting server...")
-		if err := s.Serve(lis); err != nil {
-			log.Fatalf("Failed to serve: %v", err)
+		defer wg.Done()
+		fmt.Println("gRPC server listening on :50051")
+		if err := s.Serve(grpcListener); err != nil {
+			fmt.Printf("gRPC server failed to serve: %v\n", err)
 		}
-
 	}()
 
-	// Wait for control C to exit
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt)
-	// Block until a signal is received
-	<-ch
-	fmt.Println("Stopping the server")
-	s.Stop()
-	fmt.Println("Closing the listener")
-	lis.Close()
+	go func() {
+		defer wg.Done()
+		fmt.Println("Fiber server listening on :8080")
+		if err := app.Listen(":8081"); err != nil {
+			fmt.Printf("Fiber server failed to listen: %v\n", err)
+		}
+	}()
 
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	select {
+	case <-sigChan:
+		fmt.Println("Shutting down...")
+
+		// Stop gRPC server
+		s.GracefulStop()
+
+		// Close listeners
+		err := grpcListener.Close()
+		if err != nil {
+			fmt.Printf("Grpc server shutdown error: %v\n", err)
+		}
+		err = app.Shutdown()
+		if err != nil {
+			fmt.Printf("Fiber server shutdown error: %v\n", err)
+		}
+	}
+
+	// Wait for both servers to finish
+	wg.Wait()
+
+	fmt.Println("Server gracefully stopped.")
+	//log.Fatalln(app.Listen(":8081"))
+
+	//listener, err := net.Listen("tcp", ":8081")
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//
+	//m := cmux.New(listener)
+	//grpcListener := m.Match(cmux.HTTP2HeaderField("content-type", "application/grpc"))
+	//httpListener := m.Match(cmux.HTTP1Fast())
+	//g := new(errgroup.Group)
+	//
+	//g.Go(func() error { return s.Serve(grpcListener) })
+	//g.Go(func() error { return app.Listen(httpListener.Addr().String()) })
+	//g.Go(func() error { return m.Serve() })
+	//
+	//log.Println("run server:", g.Wait())
+
+	//go func() {
+	//
+	//	fmt.Println("Starting server...")
+	//	if err := s.Serve(lis); err != nil {
+	//		log.Fatalf("Failed to serve: %v", err)
+	//	}
+	//
+	//}()
+	//
+	//// Wait for control C to exit
+	//ch := make(chan os.Signal, 1)
+	//signal.Notify(ch, os.Interrupt)
+	//// Block until a signal is received
+	//
+	//<-ch
+	//fmt.Println("Stopping the server")
+	//s.Stop()
+	//fmt.Println("Closing the listener")
+	//lis.Close()
+	//app := controllers.NewApp(configs.DB)
+	//log.Fatalln(app.Listen(":8081"))
 }
