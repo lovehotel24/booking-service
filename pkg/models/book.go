@@ -1,23 +1,21 @@
 package models
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
 type Booking struct {
 	gorm.Model
-	Id            uuid.UUID `gorm:"primary_key;type:uuid;default:uuid_generate_v4()"`
-	RoomId        uuid.UUID `gorm:"type:uuid;"`
-	UserId        uuid.UUID `gorm:"type:uuid;"`
-	BookStartDate time.Time
-	BookEndDate   time.Time
-	CheckInTime   time.Time
-	CheckOutTime  time.Time
-	PaymentStatus bool
+	Id            uuid.UUID      `gorm:"primary_key;type:uuid;default:uuid_generate_v4()"`
+	RoomId        uuid.UUID      `gorm:"type:uuid;"`
+	UserId        uuid.UUID      `gorm:"type:uuid;"`
+	BookStartDate datatypes.Date `gorm:"type:date"`
+	BookEndDate   datatypes.Date `gorm:"type:date"`
+	CheckInTime   datatypes.Time `gorm:"type:time"`
+	CheckOutTime  datatypes.Time `gorm:"type:time"`
+	PaymentStatus bool           `gorm:"default:true"`
 }
 
 func (book *Booking) BeforeCreate(tx *gorm.DB) (err error) {
@@ -25,21 +23,7 @@ func (book *Booking) BeforeCreate(tx *gorm.DB) (err error) {
 	if err != nil {
 		return err
 	}
-	book.CheckInTime = setTime("13:00")
-	book.CheckOutTime = setTime("11:00")
+	book.CheckInTime = datatypes.NewTime(13, 0, 0, 0)
+	book.CheckOutTime = datatypes.NewTime(11, 0, 0, 0)
 	return nil
-}
-
-func setTime(t string) time.Time {
-	Layout := "15:04"
-	location, err := time.LoadLocation("Asia/Bangkok")
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	some, err := time.ParseInLocation(Layout, t, location)
-	if err != nil {
-		fmt.Println(err)
-	}
-	return some
 }

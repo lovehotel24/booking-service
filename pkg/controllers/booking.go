@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
 	"github.com/lovehotel24/booking-service/pkg/configs"
@@ -20,8 +21,8 @@ func (a API) CreateBooking(ctx context.Context, request routers.CreateBookingReq
 	booking := routers.Booking{
 		RoomId:        request.Body.RoomId,
 		UserId:        request.Body.UserId,
-		BookStartDate: time.Now(),
-		BookEndDate:   time.Now().Add(12 * time.Hour),
+		BookStartDate: datatypes.Date(time.Now()),
+		BookEndDate:   datatypes.Date(time.Now().Add(12 * time.Hour)),
 		PaymentStatus: true,
 	}
 	configs.DB.Create(&booking)
@@ -36,6 +37,23 @@ func (a API) GetBookingById(ctx context.Context, request routers.GetBookingByIdR
 
 	a.DB.Where("id = ?", request.BookId).First(&booking)
 	return routers.GetBookingById200JSONResponse(booking), nil
+}
+
+func (a API) GetAllBooking(ctx context.Context, request routers.GetAllBookingRequestObject) (routers.GetAllBookingResponseObject, error) {
+	return routers.GetAllBooking200JSONResponse{}, nil
+}
+
+func (a API) GetBookingByUserId(ctx context.Context, request routers.GetBookingByUserIdRequestObject) (routers.GetBookingByUserIdResponseObject, error) {
+	return routers.GetBookingByUserId200JSONResponse{}, nil
+}
+
+func (a API) DeleteBookingById(ctx context.Context, request routers.DeleteBookingByIdRequestObject) (routers.DeleteBookingByIdResponseObject, error) {
+	return routers.DeleteBookingById204Response{}, nil
+}
+
+func (a API) UpdateBookingById(ctx context.Context, request routers.UpdateBookingByIdRequestObject) (routers.UpdateBookingByIdResponseObject, error) {
+	return routers.UpdateBookingById200JSONResponse{}, nil
+
 }
 
 func NewApp(db *gorm.DB) *fiber.App {

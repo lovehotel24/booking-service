@@ -96,7 +96,7 @@ func (u *UserService) GetAllUsers(ctx context.Context, userReq *userpb.GetAllUse
 	var users []models.User
 	var allUsers []*userpb.User
 
-	configs.DB.Limit(int(limit)).Offset(int(offset)).Find(&users)
+	configs.DB.Limit(int(limit)).Offset(int(offset)).Find(&allUsers)
 
 	for _, v := range users {
 		user := &userpb.User{

@@ -22,6 +22,41 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BookId"
+        default:
+          description: Generic error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    parameters:
+      - name: offset
+        in: query
+        schema:
+          type: integer
+        description: "The number of items to skip before starting to collect the result"
+      - name: limit
+        in: query
+        schema:
+          type: integer
+        description: "The numbers of items to return"
+    get:
+      summary: "Get All Booking"
+      operationId: "getAllBooking"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+        default:
+          description: Generic error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /v1/booking/{BookId}:
     parameters:
       - name: BookId
@@ -32,7 +67,7 @@ paths:
           type: string
         example: e1cb23d0-6cbe-4a29-b586-bfa424bc93fd
     get:
-      summary: "Get Booking Id by Id"
+      summary: "Get Booking by Booking Id"
       operationId: "getBookingById"
       responses:
         "200":
@@ -41,9 +76,81 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Booking"
+        default:
+          description: Generic error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: "Delete Booking By Booking Id"
+      operationId: "deleteBookingById"
+      responses:
+        "204":
+          description: Booking deleted response
+        default:
+          description: Booking delete error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: "Update Booking By Booking Id"
+      operationId: "updateBookingById"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Booking'
+      responses:
+        200:
+          description: "The updated booking By Id"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookId'
+        default:
+          description: Generic error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/booking/user/{UserId}:
+    parameters:
+      - name: UserId
+        in: path
+        description: The id of the User
+        required: true
+        schema:
+          type: string
+        example: e1cb23d0-6cbe-4a29-b586-bfa424bc93fd
+    get:
+      summary: "Get Booking by UserId"
+      operationId: "getBookingByUserId"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+        default:
+          description: Generic error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
 components:
   schemas:
+    UserId:
+      type: object
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
     BookId:
       type: object
       properties:
@@ -80,4 +187,17 @@ components:
           format: "date"
         paymentStatus:
           type: "boolean"
+    Error:
+      description: Object representing an error
+      type: object
+      properties:
+        code:
+          format: int32
+          description: Error code that identify of the error
+          type: integer
+          example: "1000"
+        message:
+          description: Short description of the error
+          type: string
+          example: Could not perform the task
   
