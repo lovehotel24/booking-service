@@ -72,16 +72,21 @@ func runCommand(cmd *cobra.Command, args []string) {
 		WithName(viper.GetString("pg-db")).
 		WithSecure(viper.GetBool("pg-ssl"))
 
-	db, err := configs.NewDB(dbConf)
-	if err != nil {
-		fmt.Printf("failed to connect db: %s", err)
-	}
-
 	var log = logrus.New()
 	log.SetFormatter(&logrus.JSONFormatter{})
 	log.SetOutput(os.Stdout)
 	log.SetReportCaller(true)
 	log.SetLevel(logrus.InfoLevel)
+
+	db, err := configs.NewDB(dbConf)
+	if err != nil {
+		log.WithError(err).Error("failed to connect db")
+	}
+
+	err = configs.Migrate(db)
+	if err != nil {
+		log.WithError(err).Error("failed to migrate db schema")
+	}
 
 	grpcListener, err := net.Listen("tcp", fmt.Sprintf(":%s", viper.GetString("grpc-port")))
 	if err != nil {

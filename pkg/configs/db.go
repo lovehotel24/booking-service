@@ -5,6 +5,8 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	"github.com/lovehotel24/booking-service/pkg/models"
 )
 
 type DBConfig struct {
@@ -20,24 +22,6 @@ type DBConfig struct {
 	UserPhone  string
 	UserPass   string
 }
-
-//func Connect(conf *DBConfig) {
-//	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=Asia/Bangkok", conf.Host, conf.User, conf.Pass, conf.Name, conf.Port, conf.SSLMode)
-//	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-//	if err != nil {
-//		panic(err)
-//	}
-//	db.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")
-//	err = db.AutoMigrate(&models.User{})
-//	if err != nil {
-//		panic(err)
-//	}
-//	err = db.AutoMigrate(&models.Booking{})
-//	if err != nil {
-//		panic(err)
-//	}
-//
-//}
 
 func (c DBConfig) WithHost(host string) DBConfig {
 	c.host = host
@@ -96,4 +80,16 @@ func NewDBConfig() DBConfig {
 		sslMode:  "disable",
 		timeZone: "Asia/Bangkok",
 	}
+}
+
+func Migrate(db *gorm.DB) error {
+	err := db.AutoMigrate(&models.User{})
+	if err != nil {
+		return err
+	}
+	err = db.AutoMigrate(&models.Booking{})
+	if err != nil {
+		return err
+	}
+	return err
 }
