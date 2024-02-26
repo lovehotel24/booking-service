@@ -155,7 +155,7 @@ func (u *UserService) GetAllUsers(ctx context.Context, userReq *userpb.GetAllUse
 	var users []models.User
 	var allUsers []*userpb.User
 
-	if err := u.DB.Limit(int(limit)).Offset(int(offset)).Find(&allUsers).Error; err != nil {
+	if err := u.DB.Limit(int(limit)).Offset(int(offset)).Find(&users).Error; err != nil {
 		u.Log.WithError(err).Error("failed to get users")
 		return &userpb.GetAllUserResponse{}, err
 	}

@@ -25,7 +25,9 @@ type API struct {
 
 func NewApp(db *gorm.DB, log *logrus.Logger) *fiber.App {
 	api := &API{DB: db, Log: log}
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		DisableStartupMessage: true,
+	})
 
 	server := routers.NewStrictHandler(api, nil)
 	routers.RegisterHandlers(app, server)
