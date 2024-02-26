@@ -127,18 +127,15 @@ func runCommand(cmd *cobra.Command, args []string) {
 
 		s.GracefulStop()
 
-		err := grpcListener.Close()
-		if err != nil {
+		if err := grpcListener.Close(); err != nil {
 			log.WithError(err).Error("gRPC server failed to shutdown")
 		}
 
-		err = app.Shutdown()
-		if err != nil {
+		if err := app.Shutdown(); err != nil {
 			log.WithError(err).Error("Fiber server failed to shutdown")
 		}
 	}
 
 	wg.Wait()
-
 	log.Info("Server gracefully stopped.")
 }
