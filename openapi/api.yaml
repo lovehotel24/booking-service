@@ -181,10 +181,10 @@ components:
           format: "date"
         checkInTime:
           type: "string"
-          format: "date"
+          format: "time"
         checkOutTime:
           type: "string"
-          format: "date"
+          format: "time"
         paymentStatus:
           type: "boolean"
     Error:

@@ -3,8 +3,11 @@ POST http://localhost:8081/v1/booking
 Content-Type: application/json
 
 {
-  "userId": "a8682ebc-d241-11ee-bc1f-4a29f78ba421",
-  "roomId": "a8682ebc-d241-11ee-bc1f-4a29f78ba4cc"
+  "userId": "a8682ebc-d241-11ee-bc1f-4a29f78ba401",
+  "roomId": "a8682ebc-d241-11ee-bc1f-4a29f78ba3fb",
+  "bookStartDate": "2024-02-26T15:04:05Z",
+  "bookEndDate": "2024-02-27T15:04:05Z",
+  "paymentStatus": true
 }
 
 ### get all booking
@@ -12,7 +15,7 @@ Content-Type: application/json
 GET http://localhost:8081/v1/booking
 
 ### get booking by booking id
-GET http://localhost:8081/v1/booking/f137b224-d3cd-11ee-9e54-4a29f78ba46e
+GET http://localhost:8081/v1/booking/13a0d67a-d463-11ee-b555-4a29f78ba46e
 Content-Type: application/json
 
 ### get booking by user id
@@ -22,9 +25,10 @@ GET http://localhost:8081/v1/booking/user/a8682ebc-d241-11ee-bc1f-4a29f78ba421
 DELETE http://localhost:8081/v1/booking/37855360-d3b7-11ee-a064-4a29f78ba46e
 
 ### update booking by booking id
-PUT http://localhost:8081/v1/booking/38557194-d3b7-11ee-a064-4a29f78ba46e
+PUT http://localhost:8081/v1/booking/13a0d67a-d463-11ee-b555-4a29f78ba46e
 Content-Type: application/json
 
 {
-  "roomId": "a8682ebc-d241-11ee-bc1f-4a29f78ba4ff"
+  "roomId": "a8682ebc-d241-11ee-bc1f-4a29f78ba4ff",
+  "bookStartDate": "2024-02-28T15:04:05Z"
 }

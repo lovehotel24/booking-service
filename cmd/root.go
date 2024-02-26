@@ -71,22 +71,17 @@ func runCommand(cmd *cobra.Command, args []string) {
 		WithPass(viper.GetString("pg-pass")).
 		WithName(viper.GetString("pg-db")).
 		WithSecure(viper.GetBool("pg-ssl"))
-	//dbConf := &configs.DBConfig{
-	//	host:       viper.GetString("pg-host"),
-	//	port:       viper.GetString("pg-port"),
-	//	user:       viper.GetString("pg-user"),
-	//	pass:       viper.GetString("pg-pass"),
-	//	name:       viper.GetString("pg-db"),
-	//	sslMode:    viper.GetString("pg-ssl"),
-	//	AdminPhone: viper.GetString("adm-ph"),
-	//	AdminPass:  viper.GetString("adm-pass"),
-	//	UserPhone:  viper.GetString("usr-ph"),
-	//	UserPass:   viper.GetString("usr-pass"),
-	//}
+
 	db, err := configs.NewDB(dbConf)
 	if err != nil {
 		fmt.Printf("failed to connect db: %s", err)
 	}
+
+	var log = logrus.New()
+	log.SetFormatter(&logrus.JSONFormatter{})
+	log.SetOutput(os.Stdout)
+	log.SetReportCaller(true)
+	log.SetLevel(logrus.InfoLevel)
 
 	grpcListener, err := net.Listen("tcp", fmt.Sprintf(":%s", viper.GetString("grpc-port")))
 	if err != nil {
@@ -99,10 +94,9 @@ func runCommand(cmd *cobra.Command, args []string) {
 	s := grpc.NewServer(opts...)
 	reflection.Register(s)
 
-	userService := controllers.NewUserService(db)
+	userService := controllers.NewUserService(db, log)
 	userpb.RegisterUserServiceServer(s, userService)
 
-	var log = logrus.New()
 	app := controllers.NewApp(db, log)
 
 	var wg sync.WaitGroup
@@ -110,17 +104,17 @@ func runCommand(cmd *cobra.Command, args []string) {
 
 	go func() {
 		defer wg.Done()
-		fmt.Println("gRPC server listening on :50051")
+		log.Infof("gRPC server listening on :%s", viper.GetString("grpc-port"))
 		if err := s.Serve(grpcListener); err != nil {
-			fmt.Printf("gRPC server failed to serve: %v\n", err)
+			log.WithError(err).Error("gRPC server failed to serve")
 		}
 	}()
 
 	go func() {
 		defer wg.Done()
-		fmt.Println("Fiber server listening on :8081")
+		log.Infof("Fiber server listening on :%s", viper.GetString("port"))
 		if err := app.Listen(fmt.Sprintf(":%s", viper.GetString("port"))); err != nil {
-			fmt.Printf("Fiber server failed to listen: %v\n", err)
+			log.WithError(err).Error("fiber server failed to serve")
 		}
 	}()
 
@@ -129,22 +123,22 @@ func runCommand(cmd *cobra.Command, args []string) {
 
 	select {
 	case <-sigChan:
-		fmt.Println("Shutting down...")
+		log.Info("Shutting down...")
 
 		s.GracefulStop()
 
 		err := grpcListener.Close()
 		if err != nil {
-			fmt.Printf("Grpc server shutdown error: %v\n", err)
+			log.WithError(err).Error("gRPC server failed to shutdown")
 		}
 
 		err = app.Shutdown()
 		if err != nil {
-			fmt.Printf("Fiber server shutdown error: %v\n", err)
+			log.WithError(err).Error("Fiber server failed to shutdown")
 		}
 	}
 
 	wg.Wait()
 
-	fmt.Println("Server gracefully stopped.")
+	log.Info("Server gracefully stopped.")
 }

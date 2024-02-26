@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"gorm.io/gorm"
 
@@ -13,12 +14,14 @@ import (
 
 type UserService struct {
 	userpb.UnimplementedUserServiceServer
-	DB *gorm.DB
+	DB  *gorm.DB
+	Log *logrus.Logger
 }
 
-func NewUserService(db *gorm.DB) *UserService {
+func NewUserService(db *gorm.DB, log *logrus.Logger) *UserService {
 	userService := &UserService{
-		DB: db,
+		DB:  db,
+		Log: log,
 	}
 
 	return userService
@@ -27,6 +30,9 @@ func NewUserService(db *gorm.DB) *UserService {
 func (u *UserService) getUserById(userID interface{}) (models.User, error) {
 	var user models.User
 	if err := u.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		logrus.WithFields(logrus.Fields{
+			"userID": userID,
+		}).Error("failed to get user by userId")
 		return models.User{}, err
 	}
 	return user, nil
@@ -35,6 +41,9 @@ func (u *UserService) getUserById(userID interface{}) (models.User, error) {
 func (u *UserService) getUserByPhone(phone string) (models.User, error) {
 	var user models.User
 	if err := u.DB.Where("phone = ?", phone).First(&user).Error; err != nil {
+		logrus.WithFields(logrus.Fields{
+			"phone": phone,
+		}).Error("Failed to get booking by phone")
 		return models.User{}, err
 	}
 	return user, nil
@@ -46,6 +55,7 @@ func (u *UserService) CreateUser(ctx context.Context, userReq *userpb.CreateUser
 
 	id, err := uuid.Parse(req.GetId().GetValue())
 	if err != nil {
+		u.Log.WithError(err).Error("failed to parse user uuid")
 		return nil, err
 	}
 
@@ -56,12 +66,23 @@ func (u *UserService) CreateUser(ctx context.Context, userReq *userpb.CreateUser
 		Role:  req.GetRole(),
 	}
 
-	return &emptypb.Empty{}, u.DB.Create(&newUser).Error
+	if err := u.DB.Create(&newUser).Error; err != nil {
+		u.Log.WithError(err).Error("failed to create user")
+		return nil, err
+	}
+
+	u.Log.WithFields(logrus.Fields{
+		"userID": newUser.Id.String(),
+		"name":   newUser.Name,
+	}).Info("user created successfully")
+
+	return &emptypb.Empty{}, nil
 }
 
 func (u *UserService) GetUser(ctx context.Context, userReq *userpb.GetUserRequest) (*userpb.GetUserResponse, error) {
 	user, err := u.getUserById(userReq.GetId().GetValue())
 	if err != nil {
+		u.Log.WithError(err).Error("failed to get user by id")
 		return &userpb.GetUserResponse{}, err
 	}
 
@@ -82,6 +103,7 @@ func (u *UserService) UpdateUser(ctx context.Context, userReq *userpb.UpdateUser
 
 	user, err := u.getUserById(req.GetId().GetValue())
 	if err != nil {
+		u.Log.WithError(err).Error("failed to get user by id")
 		return &userpb.UpdateUserResponse{}, err
 	}
 
@@ -91,18 +113,38 @@ func (u *UserService) UpdateUser(ctx context.Context, userReq *userpb.UpdateUser
 		user.Name = req.GetName()
 	}
 
+	//todo
 	if req.GetRole() != "" && req.GetRole() != user.Role && user.Role == "ADMIN" {
 		user.Role = req.GetRole()
 	}
 
+	if err := u.DB.Save(&user).Error; err != nil {
+		u.Log.WithError(err).Errorf("failed to update user id: %s", user.Id)
+		return nil, err
+	}
+
+	u.Log.WithFields(logrus.Fields{
+		"userID": user.Id.String(),
+		"name":   user.Name,
+	}).Info("user updated successfully")
+
 	return &userpb.UpdateUserResponse{
 		User: userReq.GetUser(),
-	}, u.DB.Save(&user).Error
+	}, nil
 }
 
 func (u *UserService) DeleteUser(ctx context.Context, userReq *userpb.DeleteUserRequest) (*emptypb.Empty, error) {
 	var user models.User
-	return &emptypb.Empty{}, u.DB.Where("id = ?", userReq.GetId().GetValue()).Delete(&user).Error
+	if err := u.DB.Where("id = ?", userReq.GetId().GetValue()).Delete(&user).Error; err != nil {
+		u.Log.WithError(err).Errorf("failed to delete user id: %s", userReq.GetId().GetValue())
+		return nil, err
+	}
+
+	u.Log.WithFields(logrus.Fields{
+		"userID": userReq.GetId().GetValue(),
+	}).Info("user deleted successfully")
+
+	return &emptypb.Empty{}, nil
 }
 
 func (u *UserService) GetAllUsers(ctx context.Context, userReq *userpb.GetAllUserRequest) (*userpb.GetAllUserResponse, error) {
@@ -114,6 +156,7 @@ func (u *UserService) GetAllUsers(ctx context.Context, userReq *userpb.GetAllUse
 	var allUsers []*userpb.User
 
 	if err := u.DB.Limit(int(limit)).Offset(int(offset)).Find(&allUsers).Error; err != nil {
+		u.Log.WithError(err).Error("failed to get users")
 		return &userpb.GetAllUserResponse{}, err
 	}
 

@@ -14,14 +14,18 @@ import (
 	"github.com/lovehotel24/booking-service/pkg/routers"
 )
 
+const (
+	DateFormat = "2006-01-02"
+)
+
 type API struct {
-	DB *gorm.DB
+	DB  *gorm.DB
+	Log *logrus.Logger
 }
 
 func NewApp(db *gorm.DB, log *logrus.Logger) *fiber.App {
-	api := &API{DB: db}
+	api := &API{DB: db, Log: log}
 	app := fiber.New()
-	app.Use(LoggerMiddleware(log))
 
 	server := routers.NewStrictHandler(api, nil)
 	routers.RegisterHandlers(app, server)
@@ -41,11 +45,17 @@ func (a API) CreateBooking(ctx context.Context, request routers.CreateBookingReq
 	}
 
 	if err := a.DB.Create(&booking).Error; err != nil {
+		a.Log.WithError(err).Error("failed to create booking")
 		return routers.CreateBookingdefaultJSONResponse{Body: routers.Error{Message: &errMsg}, StatusCode: http.StatusBadRequest}, err
 	}
 
 	response := routers.CreateBooking200JSONResponse{}
 	response.Id = &booking.Id
+	a.Log.WithFields(logrus.Fields{
+		"bookingID": booking.Id,
+		"roomID":    booking.RoomId,
+		"userID":    booking.UserId,
+	}).Info("booking created successfully")
 
 	return response, nil
 }
@@ -55,6 +65,7 @@ func (a API) GetBookingById(ctx context.Context, request routers.GetBookingByIdR
 	errMsg := fmt.Sprintf("failed to get booking id: %s", request.BookId)
 
 	if err := a.DB.Where("id = ?", request.BookId).First(&booking).Error; err != nil {
+		a.Log.WithError(err).Error(errMsg)
 		return routers.GetBookingByIddefaultJSONResponse{Body: routers.Error{Message: &errMsg}, StatusCode: http.StatusBadRequest}, err
 	}
 
@@ -77,6 +88,7 @@ func (a API) GetAllBooking(ctx context.Context, request routers.GetAllBookingReq
 	}
 
 	if err := a.DB.Limit(limit).Offset(offSet).Find(&book).Error; err != nil {
+		a.Log.WithError(err).Error(errMsg)
 		return routers.GetAllBookingdefaultJSONResponse{Body: routers.Error{Message: &errMsg}, StatusCode: http.StatusBadRequest}, err
 	}
 
@@ -86,9 +98,10 @@ func (a API) GetAllBooking(ctx context.Context, request routers.GetAllBookingReq
 func (a API) GetBookingByUserId(ctx context.Context, request routers.GetBookingByUserIdRequestObject) (routers.GetBookingByUserIdResponseObject, error) {
 	userId := request.UserId
 	var book []routers.Booking
-	errMsg := fmt.Sprintf("failed to get booking")
+	errMsg := fmt.Sprintf("failed to get booking by userId: %s", userId)
 
 	if err := a.DB.Where("user_id = ?", userId).Find(&book).Error; err != nil {
+		a.Log.WithError(err).Error(errMsg)
 		return routers.GetBookingByUserIddefaultJSONResponse{Body: routers.Error{Message: &errMsg}, StatusCode: http.StatusBadRequest}, err
 	}
 
@@ -101,12 +114,18 @@ func (a API) DeleteBookingById(ctx context.Context, request routers.DeleteBookin
 
 	book, err := a.getBookingById(bookId)
 	if err != nil {
+		a.Log.WithError(err).Errorf("failed to get booking by id: %s", bookId)
 		return routers.DeleteBookingByIddefaultJSONResponse{Body: routers.Error{Message: &errMsg}, StatusCode: http.StatusBadRequest}, err
 	}
 
 	if err := a.DB.Delete(&book).Error; err != nil {
+		a.Log.WithError(err).Error(errMsg)
 		return routers.DeleteBookingByIddefaultJSONResponse{Body: routers.Error{Message: &errMsg}, StatusCode: http.StatusBadRequest}, err
 	}
+
+	a.Log.WithFields(logrus.Fields{
+		"bookingID": bookId,
+	}).Info("Booking deleted successfully")
 
 	return routers.DeleteBookingById204Response{}, nil
 }
@@ -117,6 +136,7 @@ func (a API) UpdateBookingById(ctx context.Context, request routers.UpdateBookin
 
 	book, err := a.getBookingById(bookId)
 	if err != nil {
+		a.Log.WithError(err).Errorf("failed to get booking by id: %s", bookId)
 		return routers.UpdateBookingByIddefaultJSONResponse{Body: routers.Error{Message: &errMsg}, StatusCode: http.StatusBadRequest}, err
 	}
 
@@ -128,21 +148,38 @@ func (a API) UpdateBookingById(ctx context.Context, request routers.UpdateBookin
 		book.PaymentStatus = request.Body.PaymentStatus
 	}
 
-	if date, err := request.Body.BookStartDate.Value(); err != nil {
-		return routers.UpdateBookingByIddefaultJSONResponse{Body: routers.Error{Message: &errMsg}, StatusCode: http.StatusBadRequest}, err
-	} else if date != "" {
+	if !request.Body.BookStartDate.IsZero() {
 		book.BookStartDate = request.Body.BookStartDate
 	}
 
-	if date, err := request.Body.BookEndDate.Value(); err != nil {
-		return routers.UpdateBookingByIddefaultJSONResponse{Body: routers.Error{Message: &errMsg}, StatusCode: http.StatusBadRequest}, err
-	} else if date != "" {
+	if !request.Body.BookEndDate.IsZero() {
 		book.BookEndDate = request.Body.BookEndDate
 	}
 
+	if !book.BookStartDate.Before(book.BookEndDate) {
+		a.Log.WithFields(logrus.Fields{
+			"bookingID":     request.BookId,
+			"BookStartDate": request.Body.BookStartDate,
+			"BookEndDate":   request.Body.BookEndDate,
+		}).Error("invalid date range: BookStartDate is not before BookEndDate")
+
+		return routers.UpdateBookingByIddefaultJSONResponse{
+			Body: routers.Error{
+				Message: func() *string {
+					s := "invalid date range: BookStartDate is not before BookEndDate"
+					return &s
+				}()},
+			StatusCode: http.StatusBadRequest}, fmt.Errorf("invalid date range")
+	}
+
 	if err := a.DB.Save(&book).Error; err != nil {
+		a.Log.WithError(err).Error(errMsg)
 		return routers.UpdateBookingByIddefaultJSONResponse{Body: routers.Error{Message: &errMsg}, StatusCode: http.StatusBadRequest}, err
 	}
+
+	a.Log.WithFields(logrus.Fields{
+		"bookingID": request.BookId,
+	}).Info("Booking updated successfully")
 
 	return routers.UpdateBookingById200JSONResponse{Id: &bookId}, nil
 }
@@ -151,6 +188,7 @@ func (a API) getBookingById(bookId interface{}) (routers.Booking, error) {
 	var book routers.Booking
 
 	if err := a.DB.Where("id = ?", bookId).First(&book).Error; err != nil {
+		a.Log.WithError(err).Errorf("failed to get booking by id: %s", bookId)
 		return routers.Booking{}, err
 	}
 
