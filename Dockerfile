@@ -1,4 +1,4 @@
-FROM golang:1.21.6 as build_boomking-service
+FROM golang:1.21.6 as build_booking-service
 ENV CGO_ENABLED 0
 ARG BUILD_REF
 

@@ -10,17 +10,13 @@ import (
 )
 
 type DBConfig struct {
-	host       string
-	port       string
-	user       string
-	pass       string
-	name       string
-	sslMode    string
-	timeZone   string
-	AdminPhone string
-	AdminPass  string
-	UserPhone  string
-	UserPass   string
+	host     string
+	port     string
+	user     string
+	pass     string
+	name     string
+	sslMode  string
+	timeZone string
 }
 
 func (c DBConfig) WithHost(host string) DBConfig {
