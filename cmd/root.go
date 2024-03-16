@@ -81,6 +81,7 @@ func runCommand(cmd *cobra.Command, args []string) {
 	db, err := configs.NewDB(dbConf)
 	if err != nil {
 		log.WithError(err).Error("failed to connect db")
+		os.Exit(1)
 	}
 
 	err = configs.Migrate(db)
